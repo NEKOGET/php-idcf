@@ -8,7 +8,6 @@ $obj->run();
 
 class createCloud
 {
-
 	/**
 	 * 設定ファイルのパス
 	 */
@@ -38,7 +37,6 @@ class createCloud
 	{
 		//configの取得
 		$this->getConfig();
-		/*
 		//ssh keyの作成
 		$this->runCreateSSHKey();
 		//公開IPアドレス一覧を取得
@@ -53,25 +51,93 @@ class createCloud
 		$this->createFirewallRuleAll();
 		//PortForwardinルールの作成
 		$this->createPortForwardingRuleAll();
-		*/
 		//LBルールの作成
 		$this->createLoadBalancerRulesAll();
 		//LBへの配置
+		$this->assignToLoadBalancerRuleAll();
 
+		//hostsファイルの作成サーバ用
+
+		//ansible用hostファイルの作成
 	}
 
+	/**
+	 * ロードバランサーへのvmのアサイン
+	 */
+	public function assignToLoadBalancerRuleAll()
+	{
+		$this->checkSetConfig();
+		if (!isset($this->config['assignToLoadBalancerRule'])
+			|| !count($this->config['assignToLoadBalancerRule'])
+		) {
+			$this->debug_message('assignToLoadBalancerRuleの設定がありません。');
+			return;
+		}
+		foreach ($this->config['assignToLoadBalancerRule'] as $item) {
+			return $this->assignToLoadBalancerRule($item);
+		}
+	}
+
+	public function assignToLoadBalancerRule($item)
+	{
+		$ruleId = $this->getLoadBalancerRuleId($item);
+		$vmList = $this->getVirtualMachinesByGroup($item['virtualmachineGroup']);
+		$vmIds = [];
+		foreach($vmList['virtualmachine'] as $item){
+			$vmIds[] = $item['id'];
+		}
+		$vmIds = join(',', $vmIds);
+
+		$option = $this->createOption(['id'=>$ruleId, 'virtualmachineids' => $vmIds]);
+		$com = 'cloudstack-api assignToLoadBalancerRule ' . $option;
+		$result = $this->runApi($com);
+		var_dump($result);
+	}
+
+	public function getVirtualMachinesByGroup($group){
+		$com = 'cloudstack-api listVirtualMachines --name='.$group.'-';
+		$result = $this->runApi($com);
+		if(isset($result['listvirtualmachinesresponse']) && count($result['listvirtualmachinesresponse'] > 0))
+		{
+			return $result['listvirtualmachinesresponse'];
+		}
+		return [];
+	}
+
+	/**
+	 * LoadBalancerRuleのidを取得する
+	 * @param $item
+	 * @return mixed
+	 */
+	public function getLoadBalancerRuleId($item)
+	{
+		$optionList['publicipid'] = $this->getPublicAddressIdByName($item['publicAddress']);
+		$optionList['name'] = $item['LoadBalancerRule'];
+		$option = $this->createOption($optionList);
+		$com = 'cloudstack-api listLoadBalancerRules ' . $option;
+		$result = $this->runApi($com);
+		if (isset($result['listloadbalancerrulesresponse']['loadbalancerrule'][0]['id']))
+		{
+			return $result['listloadbalancerrulesresponse']['loadbalancerrule'][0]['id'];
+		}
+	}
+
+	/**
+	 *
+	 */
 	public function createLoadBalancerRulesAll()
 	{
 		$this->checkSetConfig();
-		if(! $this->config['LoadBalancerRules']
-			|| ! count($this->config['LoadBalancerRules']))
-		{
+		if (!$this->config['LoadBalancerRules']
+			|| !count($this->config['LoadBalancerRules'])
+		) {
 			$this->debug_message('LoadBalancerRulesの設定がありません。');
 			return;
 		}
-		foreach($this->config['LoadBalancerRules'] as $item){
+		foreach ($this->config['LoadBalancerRules'] as $item) {
 			$this->createLoadBalancerRule($item);
 		}
+		$this->debug_message('LoadBalancerRulesの作成を完了しました。');
 	}
 
 	/**
@@ -84,7 +150,6 @@ class createCloud
 		$data['publicipid'] = $this->getPublicAddressIdByName($data['PublicAddress']);
 		unset($data['PublicAddress']);
 		$com = "cloudstack-api createLoadBalancerRule " . $this->createOption($data);
-		$this->debug_message($com);
 		$result = $this->runApi($com);
 		return $result;
 	}
@@ -130,7 +195,7 @@ class createCloud
 		$option = $this->createOption($item);
 		$com = 'cloudstack-api  createPortForwardingRule ' . $option;
 		$result = $this->runApi($com);
-		if(isset($result['createportforwardingruleresponse']['id'])){
+		if (isset($result['createportforwardingruleresponse']['id'])) {
 			$id = $result['createportforwardingruleresponse']['id'];
 			$com = 'cloudstack-api createTags --resourceids=' . $id . ' --resourcetype=PortForwardingRule --tags[0].key=cloud-description --tags[0].value="' . $tag . '"';
 			$this->runApi($com);
@@ -318,7 +383,6 @@ class createCloud
 	 */
 	public function getVirtualMachine($name)
 	{
-		var_dump($name);
 		$com = 'cloudstack-api listVirtualMachines --name=' . $name;
 		$result = $this->runApi($com);
 		return $result;

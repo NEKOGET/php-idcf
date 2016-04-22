@@ -28,7 +28,7 @@
   "VirtualMachine": [
     {
       "group": "web",
-      "count": 5,
+      "count": 2,
       "serviceofferingid": "e01a9f32-55c4-4c0d-9b7c-d49a3ccfd3f6",
       "keypair": "servers",
       "templateid": "ec45fa26-e5d0-45a7-b57d-0c3f8e36ff3b",
@@ -100,24 +100,31 @@
   "LoadBalancerRules": [
     {
       "PublicAddress": "Web",
-      "name": "http",
+      "name": "web-http",
       "algorithm": "roundrobin",
-      "privateport": 8000,
-      "publicport": 8000
+      "privateport": 8800,
+      "publicport": 8800
     },
     {
       "PublicAddress": "Web",
-      "name": "https",
+      "name": "web-https",
       "algorithm": "roundrobin",
-      "privateport": 4430,
-      "publicport": 4430
+      "privateport": 4431,
+      "publicport": 4431
     },
     {
       "PublicAddress": "Api",
-      "name": "https",
+      "name": "api-https",
       "algorithm": "roundrobin",
       "privateport": 4430,
       "publicport": 4430
+    }
+  ],
+  "assignToLoadBalancerRule":[
+    {
+      "publicAddress": "Web",
+      "LoadBalancerRule": "web-https",
+      "virtualmachineGroup": "web"
     }
   ]
 }
