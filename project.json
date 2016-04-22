@@ -1,0 +1,99 @@
+{
+  "zoneid": "a53ff3d3-042b-4cbd-ad16-494bb8d33e06",
+  "sshKey": [
+    {"name": "gate"},
+    {"name": "servers"}
+  ],
+  "PublicAddress":[
+    {
+      "name":"Web",
+      "zoneid": "a53ff3d3-042b-4cbd-ad16-494bb8d33e06"
+    },
+    {
+      "name":"Api",
+      "zoneid": "a53ff3d3-042b-4cbd-ad16-494bb8d33e06"
+    },
+    {
+      "name":"jenkins",
+      "zoneid": "a53ff3d3-042b-4cbd-ad16-494bb8d33e06"
+    }
+  ],
+  "Gate": {
+    "group": "gate",
+    "serviceofferingid": "e01a9f32-55c4-4c0d-9b7c-d49a3ccfd3f6",
+    "keypair": "gate",
+    "templateid": "ec45fa26-e5d0-45a7-b57d-0c3f8e36ff3b",
+    "command": ""
+  },
+  "VirtualMachine": [
+    {
+      "group": "web",
+      "count": 5,
+      "serviceofferingid": "e01a9f32-55c4-4c0d-9b7c-d49a3ccfd3f6",
+      "keypair": "servers",
+      "templateid": "ec45fa26-e5d0-45a7-b57d-0c3f8e36ff3b",
+      "command": ""
+    },
+    {
+      "group": "api",
+      "count": 2,
+      "serviceofferingid": "e01a9f32-55c4-4c0d-9b7c-d49a3ccfd3f6",
+      "keypair": "servers",
+      "templateid": "ec45fa26-e5d0-45a7-b57d-0c3f8e36ff3b",
+      "command": ""
+    },
+    {
+      "group": "jenkins",
+      "count": 1,
+      "serviceofferingid": "e01a9f32-55c4-4c0d-9b7c-d49a3ccfd3f6",
+      "keypair": "servers",
+      "templateid": "ec45fa26-e5d0-45a7-b57d-0c3f8e36ff3b",
+      "command": ""
+    }
+  ],
+  "FirewallRules": [
+    {
+      "publicAddress": "Web",
+      "rules":[
+        {
+          "startport": 80 ,
+          "endport": 80,
+          "protocol": "tcp",
+          "tag": "http"
+        },
+        {
+          "startport": 2221 ,
+          "endport": 2221,
+          "protocol": "tcp",
+          "tag": "ssh"
+        },
+        {
+          "startport": 443 ,
+          "endport": 443,
+          "protocol": "tcp",
+          "tag": "https"
+        }
+      ]
+    },
+    {
+      "publicAddress": "Api",
+      "rules":[
+        {
+          "startport": 443 ,
+          "endport": 443,
+          "protocol": "tcp",
+          "tag": "https"
+        }
+      ]
+    }
+  ],
+  "PortForwardingRules": [
+    {
+      "publicAddress": "Web",
+      "privateport": 22,
+      "publicport": 2221,
+      "protocol": "tcp",
+      "virtualmachineName": "gate-1"
+    }
+  ]
+}
