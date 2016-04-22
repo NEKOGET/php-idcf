@@ -31,58 +31,138 @@ class createCloud
 
 	public function __construct()
 	{
-	 	$this->getConfig();
+		$this->getConfig();
 	}
 
 	public function run()
 	{
 		//configの取得
 		$this->getConfig();
+		/*
 		//ssh keyの作成
-		//$this->runCreateSSHKey();
-		//既存ネットワーク一覧を取得
-		//$this->getPublicAddressList();
-		//ネットワークを作る
-		//$this->createPublicAddressAll();
+		$this->runCreateSSHKey();
+		//公開IPアドレス一覧を取得
+		$this->getPublicAddressList();
+		//公開IPアドレスを作成する
+		$this->createPublicAddressAll();
 		//gate用仮想サーバを作成する
-		//$this->createGate();
+		$this->createGate();
 		//仮想サーバを作成する
-		//$this->createVirtualMachineAll();
-
+		$this->createVirtualMachineAll();
 		//ファイヤーウォールの作成
 		$this->createFirewallRuleAll();
-		//portfowrdルールの作成
+		//PortForwardinルールの作成
 		$this->createPortForwardingRuleAll();
-		//LBの設定
+		*/
+		//LBルールの作成
+		$this->createLoadBalancerRulesAll();
 		//LBへの配置
+
 	}
-	public function createPortForwardingRuleAll(){
+
+	public function createLoadBalancerRulesAll()
+	{
 		$this->checkSetConfig();
+		if(! $this->config['LoadBalancerRules']
+			|| ! count($this->config['LoadBalancerRules']))
+		{
+			$this->debug_message('LoadBalancerRulesの設定がありません。');
+			return;
+		}
+		foreach($this->config['LoadBalancerRules'] as $item){
+			$this->createLoadBalancerRule($item);
+		}
+	}
+
+	/**
+	 * LoadBalancerRuleの作成
+	 * @param $data
+	 * @return array
+	 */
+	public function createLoadBalancerRule($data)
+	{
+		$data['publicipid'] = $this->getPublicAddressIdByName($data['PublicAddress']);
+		unset($data['PublicAddress']);
+		$com = "cloudstack-api createLoadBalancerRule " . $this->createOption($data);
+		$this->debug_message($com);
+		$result = $this->runApi($com);
+		return $result;
+	}
+
+	/**
+	 * portForwardの全登録
+	 */
+	public function createPortForwardingRuleAll()
+	{
+		$this->checkSetConfig();
+		if (!$this->config['PortForwardingRules']
+			|| !count($this->config['PortForwardingRules'])
+		) {
+			$this->debug_message('PortForwardingRuleが設定されていません。');
+			return;
+		}
+		foreach ($this->config['PortForwardingRules'] as $item) {
+			$this->createPortForwardingRule($item);
+		}
+		$this->debug_message('PortForwardingRulesの設定を完了しました。');
+
+	}
+
+	/**
+	 * PortForwardingRuleの作成
+	 * @param $item
+	 */
+	public function createPortForwardingRule($item)
+	{
+		$tag = $item['tag'];
+		unset($item['tag']);
+		$vm = $this->getVirtualMachine($item['virtualmachineName']);
+		if (!isset($vm['listvirtualmachinesresponse']['virtualmachine'][0]['id'])) {
+			$this->debug_message('仮想サーバ[' . $item['virtualmachineName'] . ']が見つかりません。');
+			return;
+		}
+		//vmのidを設定
+		$item['virtualmachineid'] = $vm['listvirtualmachinesresponse']['virtualmachine'][0]['id'];
+		unset($item['virtualmachineName']);
+		//publicAddressを設定
+		$item['ipaddressid'] = $this->getPublicAddressIdByName($item['publicAddress']);
+		unset($item['publicAddress']);
+		$option = $this->createOption($item);
+		$com = 'cloudstack-api  createPortForwardingRule ' . $option;
+		$result = $this->runApi($com);
+		if(isset($result['createportforwardingruleresponse']['id'])){
+			$id = $result['createportforwardingruleresponse']['id'];
+			$com = 'cloudstack-api createTags --resourceids=' . $id . ' --resourcetype=PortForwardingRule --tags[0].key=cloud-description --tags[0].value="' . $tag . '"';
+			$this->runApi($com);
+		}
 	}
 
 	/**
 	 *  FirewallRuleをすべて作成する
 	 */
-	public function createFirewallRuleAll(){
+	public function createFirewallRuleAll()
+	{
 		$this->checkSetConfig();
-		if(! isset($this->config['FirewallRules'])
-			|| ! count($this->config['FirewallRules']))
-		{
+		if (!isset($this->config['FirewallRules'])
+			|| !count($this->config['FirewallRules'])
+		) {
 			$this->debug_message('FirewallRulesの設定がありません');
 			return;
 		}
-		foreach($this->config['FirewallRules'] as $item){
+		foreach ($this->config['FirewallRules'] as $item) {
 			$this->createFirewallRule($item);
 		}
 	}
+
 
 	/**
 	 * 名前からpublicAddressのidを取得する
 	 * @param $name
 	 * @return null
 	 */
-	public function getAddressId($name){
-		if(isset($this->publicAddressList[$name])){
+	public function getAddressId($name)
+	{
+		if (isset($this->publicAddressList[$name])) {
 			return $this->publicAddressList[$name];
 		}
 		return null;
@@ -95,20 +175,19 @@ class createCloud
 	public function createFirewallRule($data)
 	{
 		$addressId = $this->getPublicAddressIdByName($data['publicAddress']);
-		foreach($data['rules'] as $i){
+		foreach ($data['rules'] as $i) {
 			$tag = $i['tag'];
 			unset($i['tag']);
 			$i['ipaddressid'] = $addressId;
 			//$check = $this->getFirewallRule($i);
-			//var_dump($check); exit();
 			$option = $this->createOption($i);
 			$com = 'cloudstack-api createFirewallRule ' . $option;
 			$result = $this->runApi($com);
 			//すでに登録済みであるかのチェックツールがないため、一旦エラーは無視する。
-			if(isset($result['createfirewallruleresponse']['id'])){
+			if (isset($result['createfirewallruleresponse']['id'])) {
 				//タグの登録
 				$id = $result['createfirewallruleresponse']['id'];
-				$com = 'cloudstack-api createTags --resourceids='.$id.' --resourcetype=FirewallRule --tags[0].key=cloud-description --tags[0].value="'.$tag.'"';
+				$com = 'cloudstack-api createTags --resourceids=' . $id . ' --resourcetype=FirewallRule --tags[0].key=cloud-description --tags[0].value="' . $tag . '"';
 				$this->runApi($com);
 			}
 		}
@@ -120,9 +199,10 @@ class createCloud
 	 * @param $option
 	 * @return array
 	 */
-	public function getFirewallRule($option){
-		$option = $this->createOption(['ipaddressid'=>$option['ipaddressid']]);
-		$com = 'cloudstack-api listFirewallRules' .' '. $option;
+	public function getFirewallRule($option)
+	{
+		$option = $this->createOption(['ipaddressid' => $option['ipaddressid']]);
+		$com = 'cloudstack-api listFirewallRules' . ' ' . $option;
 		$result = $this->runApi($com);
 		return $result;
 	}
@@ -133,10 +213,11 @@ class createCloud
 	 * @param $option
 	 * @return string
 	 */
-	public function createOption($option){
+	public function createOption($option)
+	{
 		$text = '';
-		foreach($option as $key=>$item){
-			$text .= ' --'. $key.'="'.$item . '"';
+		foreach ($option as $key => $item) {
+			$text .= ' --' . $key . '="' . $item . '"';
 		}
 		return $text;
 	}
@@ -144,7 +225,8 @@ class createCloud
 	/**
 	 * @param $name
 	 */
-	public function getPublicAddressIdByName($name=''){
+	public function getPublicAddressIdByName($name = '')
+	{
 		if (!$this->publicAddressList) {
 			$this->getPublicAddressList();
 			if (!$this->publicAddressList) {
@@ -152,8 +234,7 @@ class createCloud
 				return;
 			}
 		}
-		if(isset($this->publicAddressList[$name]['id']))
-		{
+		if (isset($this->publicAddressList[$name]['id'])) {
 			return $this->publicAddressList[$name]['id'];
 		}
 		return null;
@@ -237,6 +318,7 @@ class createCloud
 	 */
 	public function getVirtualMachine($name)
 	{
+		var_dump($name);
 		$com = 'cloudstack-api listVirtualMachines --name=' . $name;
 		$result = $this->runApi($com);
 		return $result;

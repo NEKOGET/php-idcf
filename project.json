@@ -4,17 +4,17 @@
     {"name": "gate"},
     {"name": "servers"}
   ],
-  "PublicAddress":[
+  "PublicAddress": [
     {
-      "name":"Web",
+      "name": "Web",
       "zoneid": "a53ff3d3-042b-4cbd-ad16-494bb8d33e06"
     },
     {
-      "name":"Api",
+      "name": "Api",
       "zoneid": "a53ff3d3-042b-4cbd-ad16-494bb8d33e06"
     },
     {
-      "name":"jenkins",
+      "name": "jenkins",
       "zoneid": "a53ff3d3-042b-4cbd-ad16-494bb8d33e06"
     }
   ],
@@ -54,21 +54,21 @@
   "FirewallRules": [
     {
       "publicAddress": "Web",
-      "rules":[
+      "rules": [
         {
-          "startport": 80 ,
+          "startport": 80,
           "endport": 80,
           "protocol": "tcp",
           "tag": "http"
         },
         {
-          "startport": 2221 ,
+          "startport": 2221,
           "endport": 2221,
           "protocol": "tcp",
           "tag": "ssh"
         },
         {
-          "startport": 443 ,
+          "startport": 443,
           "endport": 443,
           "protocol": "tcp",
           "tag": "https"
@@ -77,9 +77,9 @@
     },
     {
       "publicAddress": "Api",
-      "rules":[
+      "rules": [
         {
-          "startport": 443 ,
+          "startport": 443,
           "endport": 443,
           "protocol": "tcp",
           "tag": "https"
@@ -93,7 +93,31 @@
       "privateport": 22,
       "publicport": 2221,
       "protocol": "tcp",
-      "virtualmachineName": "gate-1"
+      "virtualmachineName": "gate-1",
+      "tag": "gate-ssh"
+    }
+  ],
+  "LoadBalancerRules": [
+    {
+      "PublicAddress": "Web",
+      "name": "http",
+      "algorithm": "roundrobin",
+      "privateport": 8000,
+      "publicport": 8000
+    },
+    {
+      "PublicAddress": "Web",
+      "name": "https",
+      "algorithm": "roundrobin",
+      "privateport": 4430,
+      "publicport": 4430
+    },
+    {
+      "PublicAddress": "Api",
+      "name": "https",
+      "algorithm": "roundrobin",
+      "privateport": 4430,
+      "publicport": 4430
     }
   ]
 }
