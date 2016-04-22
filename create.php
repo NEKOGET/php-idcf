@@ -13,7 +13,7 @@ class createCloud
 	 */
 	public $file_path = './project.json';
 
-	public $key_dir = './data/';
+	public $key_dir = './data/key/';
 
 	public $publicAddressList = [];
 
@@ -55,10 +55,17 @@ class createCloud
 		$this->createLoadBalancerRulesAll();
 		//LBへの配置
 		$this->assignToLoadBalancerRuleAll();
-
 		//hostsファイルの作成サーバ用
-
+		$this->createHostFile();
 		//ansible用hostファイルの作成
+		$this->createAnsibleHostFile();
+	}
+
+	//ansible用hostsファイルの作成
+	public function createAnsibleHostFile()
+	{
+		$this->checkSetConfig();
+
 	}
 
 	/**
@@ -76,8 +83,13 @@ class createCloud
 		foreach ($this->config['assignToLoadBalancerRule'] as $item) {
 			return $this->assignToLoadBalancerRule($item);
 		}
+		$this->debug_message('【完了】 LBへのVMの設定を完了しました。');
 	}
 
+	/**
+	 * LBへvmの登録個別
+	 * @param $item
+	 */
 	public function assignToLoadBalancerRule($item)
 	{
 		$ruleId = $this->getLoadBalancerRuleId($item);
@@ -91,9 +103,14 @@ class createCloud
 		$option = $this->createOption(['id'=>$ruleId, 'virtualmachineids' => $vmIds]);
 		$com = 'cloudstack-api assignToLoadBalancerRule ' . $option;
 		$result = $this->runApi($com);
-		var_dump($result);
+		//$result['assigntoloadbalancerruleresponse']['jobid']
 	}
 
+	/**
+	 * vm のgroupごとの一覧
+	 * @param string $group
+	 * @return array
+	 */
 	public function getVirtualMachinesByGroup($group){
 		$com = 'cloudstack-api listVirtualMachines --name='.$group.'-';
 		$result = $this->runApi($com);
@@ -137,7 +154,7 @@ class createCloud
 		foreach ($this->config['LoadBalancerRules'] as $item) {
 			$this->createLoadBalancerRule($item);
 		}
-		$this->debug_message('LoadBalancerRulesの作成を完了しました。');
+		$this->debug_message('【完了】LoadBalancerRulesの作成を完了しました。');
 	}
 
 	/**
@@ -169,7 +186,7 @@ class createCloud
 		foreach ($this->config['PortForwardingRules'] as $item) {
 			$this->createPortForwardingRule($item);
 		}
-		$this->debug_message('PortForwardingRulesの設定を完了しました。');
+		$this->debug_message('【完了】PortForwardingRulesの設定を完了しました。');
 
 	}
 
@@ -543,7 +560,11 @@ class createCloud
 		if ($key && isset($key['createsshkeypairresponse']['keypair']['privatekey'])) {
 			$key = $key['createsshkeypairresponse']['keypair']['privatekey'];
 			//ファイルの作成
+			if(! is_dir($this->key_dir)){
+				mkdir($this->key_dir, 777);
+			}
 			file_put_contents($this->key_dir . $ssh_name . '.key', $key);
+			chmod($this->key_dir . $ssh_name . '.key', 0600);
 			return true;
 		}
 		if (isset($key['createsshkeypairresponse']['errortext'])) {
