@@ -412,11 +412,6 @@ class createCloud
 		return $result;
 	}
 
-	public function getVirtualMachineIpAddressByName($name)
-	{
-		$vm = $this->getVirtualMachine($name);
-	}
-
 	/**
 	 * sshKeyの作成
 	 * @throws Exception
