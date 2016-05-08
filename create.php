@@ -37,31 +37,31 @@ class createCloud
 
 	public function run()
 	{
-		try{
-		//configの取得
-		$this->getConfig();
-		//ssh keyの作成
-		$this->runCreateSSHKey();
-		//公開IPアドレス一覧を取得
-		$this->getPublicAddressList();
-		//公開IPアドレスを作成する
-		$this->createPublicAddressAll();
-		//仮想サーバを作成する
-		$this->createVirtualMachineAll();
-		//ファイヤーウォールの作成
-		$this->createFirewallRuleAll();
-		//PortForwardinルールの作成
-		$this->createPortForwardingRuleAll();
-		//LBルールの作成
-		$this->createLoadBalancerRulesAll();
-		//LBへの配置
-		$this->assignToLoadBalancerRuleAll();
-		//hostsファイルの作成サーバ用
-		$this->createHostFile();
-		//ansible用hostファイルの作成
-		$this->createAnsibleHostFile();
-		} catch(Exception $e){
-			$this->debug_message($e->getMessage());
+		try {
+			//configの取得
+			$this->getConfig();
+			//ssh keyの作成
+			$this->runCreateSSHKey();
+			//公開IPアドレス一覧を取得
+			$this->getPublicAddressList();
+			//公開IPアドレスを作成する
+			$this->createPublicAddressAll();
+			//仮想サーバを作成する
+			$this->createVirtualMachineAll();
+			//ファイヤーウォールの作成
+			$this->createFirewallRuleAll();
+			//PortForwardinルールの作成
+			$this->createPortForwardingRuleAll();
+			//LBルールの作成
+			$this->createLoadBalancerRulesAll();
+			//LBへの配置
+			$this->assignToLoadBalancerRuleAll();
+			//hostsファイルの作成サーバ用
+			$this->createHostFile();
+			//ansible用hostファイルの作成
+			$this->createAnsibleHostFile();
+		} catch (Exception $e) {
+			$this->debugMessage($e->getMessage());
 		}
 	}
 
@@ -70,16 +70,16 @@ class createCloud
 	{
 		$this->checkSetConfig();
 		if (!isset($this->config['VirtualMachine']) || count($this->config['VirtualMachine']) < 0) {
-			$this->debug_message('VirtualMachine作成情報がありません');
-			$this->debug_message('【完了】ansible用hostsファイルの作成を完了しました。');
+			$this->debugMessage('VirtualMachine作成情報がありません');
+			$this->debugMessage('【完了】ansible用hostsファイルの作成を完了しました。');
 			return;
 		}
 
-		$hosts= [];
+		$hosts = [];
 		foreach ($this->config['VirtualMachine'] as $item) {
 			$hosts[] = "[" . $item['group'] . "]";
 			$vmList = $this->getVirtualMachinesByGroup($item['group']);
-			foreach($vmList['virtualmachine'] as $item){
+			foreach ($vmList['virtualmachine'] as $item) {
 				$hosts[] = $item['nic'][0]['ipaddress'];
 			}
 			$hosts[] = '';
@@ -93,18 +93,18 @@ class createCloud
 	 */
 	public function assignToLoadBalancerRuleAll()
 	{
-		$this->debug_message('【開始】 LBへのVMの設定を開始しました。');
+		$this->debugMessage('【開始】 LBへのVMの設定を開始しました。');
 		$this->checkSetConfig();
 		if (!isset($this->config['assignToLoadBalancerRule'])
 			|| !count($this->config['assignToLoadBalancerRule'])
 		) {
-			$this->debug_message('assignToLoadBalancerRuleの設定がありません。');
+			$this->debugMessage('assignToLoadBalancerRuleの設定がありません。');
 			return;
 		}
 		foreach ($this->config['assignToLoadBalancerRule'] as $item) {
 			return $this->assignToLoadBalancerRule($item);
 		}
-		$this->debug_message('【完了】 LBへのVMの設定を完了しました。');
+		$this->debugMessage('【完了】 LBへのVMの設定を完了しました。');
 	}
 
 	/**
@@ -116,12 +116,12 @@ class createCloud
 		$ruleId = $this->getLoadBalancerRuleId($item);
 		$vmList = $this->getVirtualMachinesByGroup($item['virtualmachineGroup']);
 		$vmIds = [];
-		foreach($vmList['virtualmachine'] as $item){
+		foreach ($vmList['virtualmachine'] as $item) {
 			$vmIds[] = $item['id'];
 		}
 		$vmIds = join(',', $vmIds);
 
-		$option = $this->createOption(['id'=>$ruleId, 'virtualmachineids' => $vmIds]);
+		$option = $this->createOption(['id' => $ruleId, 'virtualmachineids' => $vmIds]);
 		$com = 'cloudstack-api assignToLoadBalancerRule ' . $option;
 		$result = $this->runApi($com);
 		//$result['assigntoloadbalancerruleresponse']['jobid']
@@ -132,11 +132,11 @@ class createCloud
 	 * @param string $group
 	 * @return array
 	 */
-	public function getVirtualMachinesByGroup($group){
-		$com = 'cloudstack-api listVirtualMachines --name='.$group.'-';
+	public function getVirtualMachinesByGroup($group)
+	{
+		$com = 'cloudstack-api listVirtualMachines --name=' . $group . '-';
 		$result = $this->runApi($com);
-		if(isset($result['listvirtualmachinesresponse']) && count($result['listvirtualmachinesresponse'] > 0))
-		{
+		if (isset($result['listvirtualmachinesresponse']) && count($result['listvirtualmachinesresponse'] > 0)) {
 			return $result['listvirtualmachinesresponse'];
 		}
 		return [];
@@ -154,8 +154,7 @@ class createCloud
 		$option = $this->createOption($optionList);
 		$com = 'cloudstack-api listLoadBalancerRules ' . $option;
 		$result = $this->runApi($com);
-		if (isset($result['listloadbalancerrulesresponse']['loadbalancerrule'][0]['id']))
-		{
+		if (isset($result['listloadbalancerrulesresponse']['loadbalancerrule'][0]['id'])) {
 			return $result['listloadbalancerrulesresponse']['loadbalancerrule'][0]['id'];
 		}
 	}
@@ -165,18 +164,18 @@ class createCloud
 	 */
 	public function createLoadBalancerRulesAll()
 	{
-		$this->debug_message('【開始】LoadBalancerRulesの作成を開始しました。');
+		$this->debugMessage('【開始】LoadBalancerRulesの作成を開始しました。');
 		$this->checkSetConfig();
 		if (!$this->config['LoadBalancerRules']
 			|| !count($this->config['LoadBalancerRules'])
 		) {
-			$this->debug_message('LoadBalancerRulesの設定がありません。');
+			$this->debugMessage('LoadBalancerRulesの設定がありません。');
 			return;
 		}
 		foreach ($this->config['LoadBalancerRules'] as $item) {
 			$this->createLoadBalancerRule($item);
 		}
-		$this->debug_message('【完了】LoadBalancerRulesの作成を完了しました。');
+		$this->debugMessage('【完了】LoadBalancerRulesの作成を完了しました。');
 	}
 
 	/**
@@ -198,19 +197,18 @@ class createCloud
 	 */
 	public function createPortForwardingRuleAll()
 	{
-		$this->debug_message('【開始】PortForwardingRulesの設定を開始しました。');
+		$this->debugMessage('【開始】PortForwardingRulesの設定を開始しました。');
 		$this->checkSetConfig();
 		if (!$this->config['PortForwardingRules']
 			|| !count($this->config['PortForwardingRules'])
 		) {
-			$this->debug_message('PortForwardingRuleが設定されていません。');
+			$this->debugMessage('PortForwardingRuleが設定されていません。');
 			return;
 		}
 		foreach ($this->config['PortForwardingRules'] as $item) {
 			$this->createPortForwardingRule($item);
 		}
-		$this->debug_message('【完了】PortForwardingRulesの設定を完了しました。');
-
+		$this->debugMessage('【完了】PortForwardingRulesの設定を完了しました。');
 	}
 
 	/**
@@ -223,7 +221,7 @@ class createCloud
 		unset($item['tag']);
 		$vm = $this->getVirtualMachine($item['virtualmachineName']);
 		if (!isset($vm['listvirtualmachinesresponse']['virtualmachine'][0]['id'])) {
-			$this->debug_message('仮想サーバ[' . $item['virtualmachineName'] . ']が見つかりません。');
+			$this->debugMessage('仮想サーバ[' . $item['virtualmachineName'] . ']が見つかりません。');
 			return;
 		}
 		//vmのidを設定
@@ -247,18 +245,18 @@ class createCloud
 	 */
 	public function createFirewallRuleAll()
 	{
-		$this->debug_message('【開始】FirewallRuleの作成を開始しました。');
+		$this->debugMessage('【開始】FirewallRuleの作成を開始しました。');
 		$this->checkSetConfig();
 		if (!isset($this->config['FirewallRules'])
 			|| !count($this->config['FirewallRules'])
 		) {
-			$this->debug_message('FirewallRulesの設定がありません');
+			$this->debugMessage('FirewallRulesの設定がありません');
 			return;
 		}
 		foreach ($this->config['FirewallRules'] as $item) {
 			$this->createFirewallRule($item);
 		}
-		$this->debug_message('【完了】FirewallRuleの作成を完了しました。');
+		$this->debugMessage('【完了】FirewallRuleの作成を完了しました。');
 	}
 
 
@@ -337,7 +335,7 @@ class createCloud
 		if (!$this->publicAddressList) {
 			$this->getPublicAddressList();
 			if (!$this->publicAddressList) {
-				$this->debug_message('publicAddressが登録されていないため、FirewallRuleの登録ができません。');
+				$this->debugMessage('publicAddressが登録されていないため、FirewallRuleの登録ができません。');
 				return;
 			}
 		}
@@ -349,17 +347,17 @@ class createCloud
 
 	public function createVirtualMachineAll()
 	{
-		$this->debug_message('【開始】VirtualMachine作成を開始しました。');
+		$this->debugMessage('【開始】VirtualMachine作成を開始しました。');
 		$this->checkSetConfig();
 		if (!isset($this->config['VirtualMachine']) || count($this->config['VirtualMachine']) < 0) {
-			$this->debug_message('VirtualMachine作成情報がありません');
+			$this->debugMessage('VirtualMachine作成情報がありません');
 			return;
 		}
 
 		foreach ($this->config['VirtualMachine'] as $item) {
 			$this->createVirtualMachine($item);
 		}
-		$this->debug_message('【完了】VirtualMachine作成を完了しました。');
+		$this->debugMessage('【完了】VirtualMachine作成を完了しました。');
 	}
 
 	/**
@@ -389,7 +387,7 @@ class createCloud
 			if (isset($checkData['listvirtualmachinesresponse']['count'])
 				&& $checkData['listvirtualmachinesresponse']['count'] > 0
 			) {
-				$this->debug_message('仮想サーバ[' . $createData['name'] . ']はすでに存在しています。');
+				$this->debugMessage('仮想サーバ[' . $createData['name'] . ']はすでに存在しています。');
 				return;
 			}
 
@@ -414,7 +412,8 @@ class createCloud
 		return $result;
 	}
 
-	public function getVirtualMachineIpAddressByName($name){
+	public function getVirtualMachineIpAddressByName($name)
+	{
 		$vm = $this->getVirtualMachine($name);
 	}
 
@@ -477,7 +476,7 @@ class createCloud
 	//publicIpAddressの作成
 	public function createPublicAddressAll()
 	{
-		$this->debug_message('【開始】PublicAddress作成を開始しました。');
+		$this->debugMessage('【開始】PublicAddress作成を開始しました。');
 		$this->checkSetConfig();
 		if (!isset($this->config['PublicAddress'])
 			|| !count($this->config['PublicAddress'])
@@ -489,7 +488,7 @@ class createCloud
 		}
 		//リスト更新
 		$this->getPublicAddressList();
-		$this->debug_message('【完了】PublicAddress作成を完了しました。');
+		$this->debugMessage('【完了】PublicAddress作成を完了しました。');
 	}
 
 	/**
@@ -505,7 +504,7 @@ class createCloud
 		}
 		//存在確認すでに存在しているなら作成しなくていい
 		if (isset($this->publicAddressList[$data['name']])) {
-			$this->debug_message("publicAddress [" . $data['name'] . ']はすでに存在します');
+			$this->debugMessage("publicAddress [" . $data['name'] . ']はすでに存在します');
 			return true;
 		}
 		$com = 'cloudstack-api associateIpAddress --zoneid=' . $data['zoneid'];
@@ -535,20 +534,18 @@ class createCloud
 	{
 		$com = 'cloudstack-api listVirtualMachines';
 		$result = $this->runApi($com);
-		if(isset($result['listvirtualmachinesresponse']['virtualmachine'])
-			&& count($result['listvirtualmachinesresponse']['virtualmachine']) > 0)
-		{
+		if (isset($result['listvirtualmachinesresponse']['virtualmachine'])
+			&& count($result['listvirtualmachinesresponse']['virtualmachine']) > 0
+		) {
 			$host = [];
-			foreach($result['listvirtualmachinesresponse']['virtualmachine'] as $vm)
-			{
-				if(isset($vm['name']) && isset($vm['nic'][0]['ipaddress']))
-				{
-					$host[] = $vm['name'] . ' '. $vm['nic'][0]['ipaddress'];
+			foreach ($result['listvirtualmachinesresponse']['virtualmachine'] as $vm) {
+				if (isset($vm['name']) && isset($vm['nic'][0]['ipaddress'])) {
+					$host[] = $vm['name'] . ' ' . $vm['nic'][0]['ipaddress'];
 				}
 			}
 			$host_text = join("\n", $host);
 			file_put_contents($this->data_dir . 'hosts', $host_text);
-			$this->debug_message('【完了】hostsファイルの作成を完了しました。');
+			$this->debugMessage('【完了】hostsファイルの作成を完了しました。');
 		}
 
 	}
@@ -583,7 +580,7 @@ class createCloud
 		if (isset($ssh_key_list['listsshkeypairsresponse']['count'])
 			&& $ssh_key_list['listsshkeypairsresponse']['count']
 		) {
-			$this->debug_message("sshKey[" . $ssh_name . ']はすでに存在します');
+			$this->debugMessage("sshKey[" . $ssh_name . ']はすでに存在します');
 			return;
 		}
 		$output = shell_exec("cloudstack-api createSSHKeyPair --name=" . $ssh_name);
@@ -592,7 +589,7 @@ class createCloud
 		if ($key && isset($key['createsshkeypairresponse']['keypair']['privatekey'])) {
 			$key = $key['createsshkeypairresponse']['keypair']['privatekey'];
 			//ファイルの作成
-			if(! is_dir($this->key_dir)){
+			if (!is_dir($this->key_dir)) {
 				mkdir($this->key_dir, 777);
 			}
 			file_put_contents($this->key_dir . $ssh_name . '.key', $key);
@@ -608,7 +605,7 @@ class createCloud
 	 * デバックメッセージを出力
 	 * @param $text
 	 */
-	public function debug_message($text)
+	public function debugMessage($text)
 	{
 		echo $text . "\n";
 	}
