@@ -5,8 +5,7 @@
     {"name": "servers"}
   ],
   "PublicAddress": [
-    {
-      "name": "Web",
+    {"name": "Web",
       "zoneid": "a53ff3d3-042b-4cbd-ad16-494bb8d33e06"
     },
     {
@@ -18,13 +17,6 @@
       "zoneid": "a53ff3d3-042b-4cbd-ad16-494bb8d33e06"
     }
   ],
-  "Gate": {
-    "group": "gate",
-    "serviceofferingid": "e01a9f32-55c4-4c0d-9b7c-d49a3ccfd3f6",
-    "keypair": "gate",
-    "templateid": "ec45fa26-e5d0-45a7-b57d-0c3f8e36ff3b",
-    "command": ""
-  },
   "VirtualMachine": [
     {
       "group": "web",
@@ -47,6 +39,14 @@
       "count": 1,
       "serviceofferingid": "e01a9f32-55c4-4c0d-9b7c-d49a3ccfd3f6",
       "keypair": "servers",
+      "templateid": "ec45fa26-e5d0-45a7-b57d-0c3f8e36ff3b",
+      "command": ""
+    },
+    {
+      "group": "gate",
+      "count": 1,
+      "serviceofferingid": "e01a9f32-55c4-4c0d-9b7c-d49a3ccfd3f6",
+      "keypair": "gate",
       "templateid": "ec45fa26-e5d0-45a7-b57d-0c3f8e36ff3b",
       "command": ""
     }
@@ -102,22 +102,22 @@
       "PublicAddress": "Web",
       "name": "web-http",
       "algorithm": "roundrobin",
-      "privateport": 8800,
-      "publicport": 8800
+      "privateport": 80,
+      "publicport": 80
     },
     {
       "PublicAddress": "Web",
       "name": "web-https",
       "algorithm": "roundrobin",
-      "privateport": 4431,
-      "publicport": 4431
+      "privateport": 443,
+      "publicport": 443
     },
     {
       "PublicAddress": "Api",
       "name": "api-https",
       "algorithm": "roundrobin",
-      "privateport": 4430,
-      "publicport": 4430
+      "privateport": 443,
+      "publicport": 443
     }
   ],
   "assignToLoadBalancerRule":[
