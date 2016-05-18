@@ -1,21 +1,13 @@
 {
-  "zoneid": "a53ff3d3-042b-4cbd-ad16-494bb8d33e06",
+  "zoneName": "radian",
   "sshKey": [
     {"name": "gate"},
     {"name": "servers"}
   ],
   "PublicAddress": [
-    {"name": "Web",
-      "zoneid": "a53ff3d3-042b-4cbd-ad16-494bb8d33e06"
-    },
-    {
-      "name": "Api",
-      "zoneid": "a53ff3d3-042b-4cbd-ad16-494bb8d33e06"
-    },
-    {
-      "name": "jenkins",
-      "zoneid": "a53ff3d3-042b-4cbd-ad16-494bb8d33e06"
-    }
+    {"name": "Web"},
+    {"name": "Api"},
+    {"name": "jenkins"}
   ],
   "VirtualMachine": [
     {

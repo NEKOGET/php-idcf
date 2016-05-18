@@ -23,11 +23,11 @@ class createCloud
 
 	public $firewall = [];
 
-	public $zoneId = [];
-
 	public $sshKeyList = [];
 
 	public $config = [];
+
+	private $_zoneId = null;
 
 
 	public function __construct()
@@ -40,10 +40,12 @@ class createCloud
 		try {
 			//configの取得
 			$this->getConfig();
+			//zoneIdの取得
+			$this->getZoneId();
 			//ssh keyの作成
 			$this->runCreateSSHKey();
 			//公開IPアドレス一覧を取得
-			$this->getPublicAddressList();
+			//$this->getPublicAddressList();
 			//公開IPアドレスを作成する
 			$this->createPublicAddressAll();
 			//仮想サーバを作成する
@@ -63,6 +65,26 @@ class createCloud
 		} catch (Exception $e) {
 			$this->debugMessage($e->getMessage());
 		}
+
+	}
+
+	/**
+	 * zoneIdの取得
+	 * @param string $name
+	 * @return null
+	 */
+	public function getZoneId()
+	{
+		$this->checkSetConfig();
+		$zoneName = $this->config['zoneName'];
+		$com = 'cloudstack-api listZones --name=' . $zoneName;
+		$result = $this->runApi($com);
+		if(isset($result['listzonesresponse']['zone'][0]['id']))
+		{
+			$this->_zoneId = $result['listzonesresponse']['zone'][0]['id'];
+			return $this->_zoneId;
+		}
+		return null;
 	}
 
 	//ansible用hostsファイルの作成
@@ -375,7 +397,7 @@ class createCloud
 		for ($i = 1; $i <= $con; $i++) {
 			$createData = [
 				'serviceofferingid' => $data['serviceofferingid'],
-				'zoneid' => $this->config['zoneid'],
+				'zoneid' => $this->_zoneId,
 				'group' => $data['group'],
 				'keypair' => $data['keypair'],
 				'templateid' => $data['templateid'],
@@ -494,7 +516,10 @@ class createCloud
 	 */
 	public function createPublicAddress($data = [])
 	{
-		if (!$data || !isset($data['name']) || !isset($data['zoneid'])) {
+		if(! $this->_zoneId){
+			throw new Exception('ZoneIdが取得できないため、処理を中止します。');
+		}
+		if (!$data || !isset($data['name'])) {
 			return null;
 		}
 		//存在確認すでに存在しているなら作成しなくていい
@@ -502,9 +527,9 @@ class createCloud
 			$this->debugMessage("publicAddress [" . $data['name'] . ']はすでに存在します');
 			return true;
 		}
-		$com = 'cloudstack-api associateIpAddress --zoneid=' . $data['zoneid'];
-		$output = shell_exec($com);
-		$m = json_decode($output, true);
+
+		$com = 'cloudstack-api associateIpAddress --zoneid=' . $this->_zoneId;
+		$m = $this->runApi($com);
 		if (!isset($m['associateipaddressresponse']['id'])) {
 			throw new Exception('PublicAddress Error: ' . $data['name']);
 		}
@@ -513,18 +538,22 @@ class createCloud
 			. $id
 			. ' --resourcetype PublicIpAddress --tags[0].key=cloud-description --tags[0].value='
 			. $data['name'];
-		shell_exec($com);
+		$this->runApi($com);
 		return true;
 	}
 
-	//設定ファイルの取得
+	/**
+	 * 設定ファイルの取得
+	 */
 	public function getConfig()
 	{
 		$data = file_get_contents($this->file_path);
 		$this->config = json_decode($data, true);
 	}
 
-	//hostsファイルの作成
+	/**
+	 * hostsファイルの作成
+	 */
 	public function createHostFile()
 	{
 		$com = 'cloudstack-api listVirtualMachines';
@@ -557,7 +586,8 @@ class createCloud
 		if (!$command) {
 			return [];
 		}
-		$output = json_decode(shell_exec($command), true);
+		$json = shell_exec($command);
+		$output = json_decode($json, true);
 		return $output;
 	}
 
@@ -570,16 +600,20 @@ class createCloud
 	 */
 	public function createSSHKey($ssh_name = '')
 	{
-		$output = shell_exec("cloudstack-api listSSHKeyPairs --name=" . $ssh_name);
-		$ssh_key_list = json_decode($output, true);
+		if(! $ssh_name){
+			$this->debugMessage('sshKeyの名前が設定されていません。');
+			return;
+		}
+		$com = "cloudstack-api listSSHKeyPairs --name=" . $ssh_name;
+		$ssh_key_list = $this->runApi($com);
 		if (isset($ssh_key_list['listsshkeypairsresponse']['count'])
 			&& $ssh_key_list['listsshkeypairsresponse']['count']
 		) {
 			$this->debugMessage("sshKey[" . $ssh_name . ']はすでに存在します');
 			return;
 		}
-		$output = shell_exec("cloudstack-api createSSHKeyPair --name=" . $ssh_name);
-		$key = json_decode($output, true);
+		$com = "cloudstack-api createSSHKeyPair --name=" . $ssh_name;
+		$key = $this->runApi($com);
 		//作成成功時
 		if ($key && isset($key['createsshkeypairresponse']['keypair']['privatekey'])) {
 			$key = $key['createsshkeypairresponse']['keypair']['privatekey'];
