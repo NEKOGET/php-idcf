@@ -17,6 +17,13 @@ class createCloud
 
 	public $data_dir = './data/';
 
+	public $publicIpListFile = './data/public_ip_hosts';
+
+	public $gateKey = 'gate';
+
+	public $gatePort = 2221;
+
+
 	public $publicAddressList = [];
 
 	public $hosts = [];
@@ -45,7 +52,7 @@ class createCloud
 			//ssh keyの作成
 			$this->runCreateSSHKey();
 			//公開IPアドレス一覧を取得
-			//$this->getPublicAddressList();
+			$this->getPublicAddressList();
 			//公開IPアドレスを作成する
 			$this->createPublicAddressAll();
 			//仮想サーバを作成する
@@ -62,6 +69,8 @@ class createCloud
 			$this->createHostFile();
 			//ansible用hostファイルの作成
 			$this->createAnsibleHostFile();
+			//public ip list fileの作成
+			$this->createPublicAddressFile();
 		} catch (Exception $e) {
 			$this->debugMessage($e->getMessage());
 		}
@@ -355,12 +364,13 @@ class createCloud
 	public function getPublicAddressIdByName($name = '')
 	{
 		if (!$this->publicAddressList) {
-			$this->getPublicAddressList();
-			if (!$this->publicAddressList) {
+			$address = $this->getPublicAddressList();
+			if (! $address) {
 				$this->debugMessage('publicAddressが登録されていないため、FirewallRuleの登録ができません。');
 				return;
 			}
 		}
+
 		if (isset($this->publicAddressList[$name]['id'])) {
 			return $this->publicAddressList[$name]['id'];
 		}
@@ -523,11 +533,10 @@ class createCloud
 			return null;
 		}
 		//存在確認すでに存在しているなら作成しなくていい
-		if (isset($this->publicAddressList[$data['name']])) {
+		if ($this->getPublicAddressIdByName($data['name'])) {
 			$this->debugMessage("publicAddress [" . $data['name'] . ']はすでに存在します');
 			return true;
 		}
-
 		$com = 'cloudstack-api associateIpAddress --zoneid=' . $this->_zoneId;
 		$m = $this->runApi($com);
 		if (!isset($m['associateipaddressresponse']['id'])) {
@@ -637,5 +646,34 @@ class createCloud
 	public function debugMessage($text)
 	{
 		echo $text . "\n";
+	}
+
+	/**
+	 * 公開IPからansible用hostsファイルを作成する。
+	 */
+	public function createPublicAddressFile()
+	{
+		$this->debugMessage('【開始】公開IPからansible用hostsファイルを作成します。');
+		$this->checkSetConfig();
+		if (!isset($this->config['PublicAddress'])
+			|| !count($this->config['PublicAddress'])
+		) {
+			$this->debugMessage('【中止】公開IPが存在しないため作成を中止します。');
+			return;
+		}
+		$output = [];
+		foreach ($this->config['PublicAddress'] as $item) {
+			$key = $item['name'];
+			$data = $this->publicAddressList[$key];
+			$output[] = '[' . $key . ']';
+			$output[] = $data['ipaddress'] . ':' .$this->gatePort;
+			$output[] = '';
+			$output[] = '[' . $key . ':vars]';
+			$output[] = 'ansible_ssh_user=root';
+			$output[] = 'ansible_ssh_private_key_file=key/' . $this->gateKey  . '.key';
+			$output[] = '';
+		}
+		file_put_contents($this->publicIpListFile, join("\n", $output));
+		$this->debugMessage('【完了】公開IPからansible用hostsファイルを作成完了しました、');
 	}
 }
