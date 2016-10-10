@@ -571,6 +571,8 @@ class createCloud
 			&& count($result['listvirtualmachinesresponse']['virtualmachine']) > 0
 		) {
 			$host = [];
+			$host[] = '127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4';
+			$host[] = '::1         localhost localhost.localdomain localhost6 localhost6.localdomain6';
 			foreach ($result['listvirtualmachinesresponse']['virtualmachine'] as $vm) {
 				if (isset($vm['name']) && isset($vm['nic'][0]['ipaddress'])) {
 					$host[] = $vm['name'] . ' ' . $vm['nic'][0]['ipaddress'];
