@@ -1,0 +1,8 @@
+- hosts: Web
+  tasks:
+  - name: hosts
+    template: src=../hosts dest=/etc/hosts mode=0644 owner=root
+
+  - name: "set private key"
+    template: src=../key/servers.key dest=/root/.ssh/id_rsa mode=0600  owner=root
+
