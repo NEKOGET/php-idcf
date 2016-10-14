@@ -6,7 +6,7 @@ masterにcommitしてますがまだ未完成ですよ。
 あとでもう少し詳細なの書きます。
 
 ## 動作環境
-* OSX 10.10.5
+* OSX 10.11.6
 * cloud-stack api動作環境の作成方法
  * http://docs.idcf.jp/cloud/introduction/
 * PHP5.4以上
