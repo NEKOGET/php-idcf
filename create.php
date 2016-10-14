@@ -13,27 +13,76 @@ class createCloud
 	 */
 	public $file_path = './project.json';
 
+	/**
+	 * ssh key fileを保存するフォルダ
+	 * @var string
+	 */
 	public $key_dir = './data/key/';
 
+	/**
+	 * データフォルダ
+	 * @var string
+	 */
 	public $data_dir = './data/';
 
+	/**
+	 * ansible用 hostsファイルを保存するパス
+	 * @var string
+	 */
 	public $publicIpListFile = './data/public_ip_hosts';
 
+	/**
+	 * 踏み台の秘密鍵
+	 * @var string
+	 */
 	public $gateKey = 'gate';
 
+	/**
+	 * 踏み台のsshポート
+	 * @var int
+	 */
 	public $gatePort = 2221;
 
+	/**
+	 * 踏み台のpublic ip
+	 * @var string
+	 */
+	public $gatePublicIp = 'Web';
 
+	/**
+	 * public ip address
+	 * @var array
+	 */
 	public $publicAddressList = [];
 
+	/**
+	 * hosts
+	 * @var array
+	 */
 	public $hosts = [];
 
+	/**
+	 * firewall
+	 * @var array
+	 */
 	public $firewall = [];
 
+	/**
+	 * ssh keyのリスト
+	 * @var array
+	 */
 	public $sshKeyList = [];
 
+	/**
+	 * 設定
+	 * @var array
+	 */
 	public $config = [];
 
+	/**
+	 * zone id
+	 * @var null
+	 */
 	private $_zoneId = null;
 
 
@@ -558,6 +607,9 @@ class createCloud
 	{
 		$data = file_get_contents($this->file_path);
 		$this->config = json_decode($data, true);
+		$this->gatePort = $this->config['gate']['port'];
+		$this->gateKey = $this->config['gate']['sshKey'];
+		$this->gatePublicIp = $this->config['gate']['PublicAddress'];
 	}
 
 	/**
@@ -664,18 +716,16 @@ class createCloud
 			return;
 		}
 		$output = [];
-		foreach ($this->config['PublicAddress'] as $item) {
-			$key = $item['name'];
-			$data = $this->publicAddressList[$key];
-			$output[] = '[' . $key . ']';
-			$output[] = $data['ipaddress'] . ':' .$this->gatePort;
-			$output[] = '';
-			$output[] = '[' . $key . ':vars]';
-			$output[] = 'ansible_ssh_user=root';
-			$output[] = 'ansible_ssh_private_key_file=key/' . $this->gateKey  . '.key';
-			$output[] = '';
-		}
+		$data = $this->publicAddressList[$this->gatePublicIp];
+		$output[] = '[' . $this->gatePublicIp . ']';
+		$output[] = $data['ipaddress'] . ':' .$this->gatePort;
+		$output[] = '';
+		$output[] = '[' . $this->gatePublicIp . ':vars]';
+		$output[] = 'ansible_ssh_user=root';
+		$output[] = 'ansible_ssh_private_key_file=key/' . $this->gateKey  . '.key';
+		$output[] = '';
 		file_put_contents($this->publicIpListFile, join("\n", $output));
+		chmod($this->publicIpListFile,0600);
 		$this->debugMessage('【完了】公開IPからansible用hostsファイルを作成完了しました、');
 	}
 }

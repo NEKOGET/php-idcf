@@ -6,3 +6,17 @@
   - name: "set private key"
     template: src=../key/servers.key dest=/root/.ssh/id_rsa mode=0600  owner=root
 
+  - name: "ssh PermitEmptyPasswords"
+    replace: >-
+      dest='/etc/ssh/sshd_config'
+      regexp='#PermitEmptyPasswords no'
+      replace='PermitEmptyPasswords no'
+
+  - name: "ssh PasswordAuthentication"
+    replace: >-
+      dest='/etc/ssh/sshd_config'
+      regexp='PasswordAuthentication yes'
+      replace='PasswordAuthentication no'
+
+  - name: "ssh restart"
+    service: name=sshd state=restarted

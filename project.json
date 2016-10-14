@@ -1,5 +1,10 @@
 {
   "zoneName": "radian",
+  "gate": {
+    "PublicAddress": "Web",
+    "sshKey":"gate",
+    "port": 2221
+  },
   "sshKey": [
     {"name": "gate"},
     {"name": "servers"}
